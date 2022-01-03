@@ -12,7 +12,7 @@ class TestConfig:
         parser.add_argument('--image', type=str, default='')
         parser.add_argument('--mask', type=str, default='')
         parser.add_argument('--result', type=str, default='')
-
+#--model = './readthis' --image './examples/places2/images' --mask './examples/places2/masks' --result './checkpoints/results'
         # Optionals
         parser.add_argument('--workers', type=int, default=1)
         parser.add_argument('--batch_size', type=int, default=1)

@@ -5,6 +5,7 @@ from utils.utils import spectral_norm
 
 
 class BaseGenerator(nn.Module):
+
     def __init__(self):
         super(BaseGenerator, self).__init__()
 

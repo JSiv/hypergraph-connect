@@ -1,3 +1,4 @@
+import glob
 import os.path
 
 import numpy as np
@@ -9,18 +10,18 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import random
 
-from torchvision.transforms import transforms
+from torchvision.transforms import transforms, InterpolationMode
 
 
 class ProjectDataset(Dataset):
 
-    def __init__(self, images, masks, input_size=256, sigma=2., augment=True, train=True):
+    def __init__(self, images, masks, input_size=256, sigma=2., augment=True, train=False):
         super(ProjectDataset, self).__init__()
 
         self.train = False
         self.augment = augment
-        self.images = self.load_files(dir=images)
-        self.masks = self.load_files(dir=masks)
+        self.images = self.load_flist(dir=images)
+        self.masks = self.load_flist(dir=masks)
         self.input_size = input_size
         self.sigma = sigma
         self.train = train
@@ -61,23 +62,30 @@ class ProjectDataset(Dataset):
     def __len__(self):
         return self.no_of_images
 
+    def load_name(self, index):
+        return os.path.basename(self.images[index])
+
     def transform_images(self, input_size):
         return transforms.Compose([
             # transforms.CenterCrop(size=(178, 178)),  # for CelebA
-            transforms.Resize(size=input_size, interpolation=Image.BILINEAR),
+            transforms.Resize(size=input_size, interpolation=InterpolationMode.BILINEAR),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
 
     def transform_masks(self, input_size):
         return transforms.Compose([
-            transforms.Resize(size=input_size, interpolation=Image.NEAREST),
+            transforms.Resize(size=input_size, interpolation=InterpolationMode.NEAREST),
             transforms.ToTensor()
         ])
 
+    def tensor_to_image(self):
+
+        return transforms.ToPILImage()
+
     def image_to_edge(self, image, sigma):
 
-        temp = rgb2gray(np.array(transforms.ToTensor()(image)))
+        temp = rgb2gray(np.array(self.tensor_to_image()(image)))
 
         gray = transforms.ToTensor()(
             Image.fromarray(temp)
@@ -87,6 +95,25 @@ class ProjectDataset(Dataset):
             Image.fromarray(canny(temp, sigma))
         )
         return edge, gray
+
+    def load_flist(self, dir):
+        if isinstance(dir, list):
+            return dir
+
+        # flist: image file path, image directory path, text file flist path
+        if isinstance(dir, str):
+            if os.path.isdir(dir):
+                flist = list(glob.glob(dir + '/*.jpg')) + list(glob.glob(dir + '/*.png'))
+                flist.sort()
+                return flist
+
+            if os.path.isfile(dir):
+                try:
+                    return np.genfromtxt(dir, dtype=np.str, encoding='utf-8')
+                except:
+                    return [dir]
+
+        return []
 
     def load_files(self, dir, max_dataset_size=float("inf")):
         files = []
@@ -104,7 +131,7 @@ class ProjectDataset(Dataset):
 
 
 def create_dataset(opts):
-    #opts.input_size
+    # opts.input_size
     return ProjectDataset(
         opts.image,
         opts.mask,
